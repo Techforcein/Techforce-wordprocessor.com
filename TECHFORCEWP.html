@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <style>/* Add these to your existing CSS */
+.advanced-media-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 8px;
+}
+
+.advanced-media-actions button {
+    padding: 6px 12px;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+    background-color: var(--bg-color);
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    width: 80%;
+    max-width: 800px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.close {
+    color: var(--text-color);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: var(--error-color);
+}
+
+
+
+#audio-preview {
+    width: 100%;
+    margin: 15px 0;
+}
+
+.drawing-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.drawing-tools {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+#drawing-canvas {
+    border: 1px solid var(--border-color);
+    background-color: white;
+    margin-bottom: 15px;
+    cursor: crosshair;
+}
+
+/* 3D Viewer Styles */
+.model-viewer-container {
+    width: 100%;
+    height: 400px;
+    position: relative;
+}
+
+.model-viewer-container model-viewer {
+    width: 100%;
+    height: 100%;
+}
+</style><style>:root {
+    /* Dark theme colors (VS Code inspired) */
+    --bg-color: #1e1e1e;
+    --text-color: #d4d4d4;
+    --primary-color: #569cd6;
+    --secondary-color: #252526;
+    --toolbar-bg: #2d2d2d;
+    --tab-active-bg: #1e1e1e;
+    --tab-inactive-bg: #2d2d2d;
+    --border-color: #3c3c3c;
+    --accent-color: #9cdcfe;
+    --string-color: #ce9178;
+    --keyword-color: #569cd6;
+    --comment-color: #6a9955;
+    --error-color: #f44747;
+}
+
+
+.light-theme {
+    /* Light theme colors (Light IDE inspired) */
+    --bg-color: #ffffff;
+    --text-color: #1e1e1e;
+    --primary-color: #0451a5;
+    --secondary-color: #f3f3f3;
+    --toolbar-bg: #e5e5e5;
+    --tab-active-bg: #ffffff;
+    --tab-inactive-bg: #d4d4d4;
+    --border-color: #cccccc;
+    --accent-color: #0000ff;
+    --string-color: #a31515;
+    --keyword-color: #0000ff;
+    --comment-color: #008000;
+    --error-color: #ff0000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    height: 100vh;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: var(--secondary-color);
+    color: var(--accent-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.app-header h1 {
+    font-size: 16px;
+    font-weight: normal;
+    color: var(--keyword-color);
+}
+
+.theme-switcher button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.theme-switcher button:hover {
+    opacity: 0.9;
+}
+
+.toolbar-container {
+    background-color: var(--toolbar-bg);
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-bar {
+    display: flex;
+    margin-bottom: 4px;
+}
+
+.tabs {
+    display: flex;
+    flex-grow: 1;
+}
+
+.tab {
+    padding: 4px 12px;
+    background-color: var(--tab-inactive-bg);
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    cursor: pointer;
+    margin-right: 4px;
+    border-radius: 4px 4px 0 0;
+    color: var(--text-color);
+    position: relative;
+    min-width: 120px;
+    text-align: center;
+}
+
+.tab.active {
+    background-color: var(--tab-active-bg);
+    border-bottom: 1px solid var(--tab-active-bg);
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.tab::after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background-color: var(--comment-color);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tab.unsaved::after {
+    opacity: 1;
+}
+
+#add-tab {
+    padding: 4px 8px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-left: 4px;
+    font-weight: bold;
+}
+
+.file-actions {
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.file-actions button {
+    padding: 4px 8px;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.file-actions button:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.file-actions button:active {
+    transform: translateY(1px);
+}
+
+.editor-container {
+    flex-grow: 1;
+    position: relative;
+    background-color: var(--tab-active-bg);
+}
+
+.editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+}
+
+.editor.active-editor {
+    display: block;
+}
+
+/* TinyMCE Customizations */
+.tox-tinymce {
+    height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+/* Status bar styling */
+.status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--secondary-color);
+    padding: 4px 8px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+}
+
+.status-item .icon {
+    margin-right: 4px;
+    color: var(--comment-color);
+}
+
+/* Syntax highlighting for code blocks */
+pre {
+    background-color: var(--secondary-color);
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    border-left: 3px solid var(--primary-color);
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: var(--text-color);
+}
+
+.token.comment {
+    color: var(--comment-color);
+}
+
+.token.string {
+    color: var(--string-color);
+}
+
+.token.keyword {
+    color: var(--keyword-color);
+}
+
+.token.function {
+    color: var(--accent-color);
+}
+
+.token.operator {
+    color: var(--text-color);
+}
+
+.token.punctuation {
+    color: var(--text-color);
+}
+</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TECH FORCE - Word Processor</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tiny.cloud/1/clw6aq8ujdh7aiy5dez0bzl5f55703zwcmjxu7vtgzlq0xbl/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <header class="app-header">
+            <h1>TECH FORCE</h1>
+            <div class="theme-switcher">
+                <button id="theme-toggle">Light Mode</button>
+            </div>
+        </header>
+
+        <div class="theme-switcher">
+ <a href="XXXXXXXXXX">
+  <button>AI Images</button>
+</a>
+
+<a href="YYYYYYYY">
+<button> AI Sound </button>
+</a>
+ 
+<a href="ZZZZZZ">
+
+<button>3D Objects</button>
+
+</a>
+        </div>
+        <!-- Add these near the other toolbar buttons -->
+<div class="advanced-media-actions">
+    <button id="insert-3d">Insert 3D</button>
+    <button id="insert-audio">Insert Audio</button>
+    <button id="start-drawing">Drawing Mode</button>
+</div>
+
+<!-- Add these modals at the bottom of the body -->
+<div id="3d-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Insert 3D Object</h3>
+        <input type="file" id="3d-file-input" accept=".glb,.gltf,.obj">
+        <div class="3d-preview" id="3d-preview-container"></div>
+        <button id="insert-3d-confirm">Insert</button>
+    </div>
+</div>
+
+<div id="audio-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Insert Audio</h3>
+        <input type="file" id="audio-file-input" accept=".mp3,.wav,.ogg">
+        <audio controls id="audio-preview"></audio>
+        <button id="insert-audio-confirm">Insert</button>
+    </div>
+</div>
+
+<div id="drawing-modal" class="modal">
+    <div class="modal-content drawing-container">
+        <span class="close">&times;</span>
+        <h3>Drawing Canvas</h3>
+        <div class="drawing-tools">
+            <button data-tool="pencil">✏️ Pencil</button>
+            <button data-tool="line">📏 Line</button>
+            <button data-tool="rectangle">⬛ Rectangle</button>
+             <button data-tool="square"> </button>
+            <button data-tool="circle">🔵 Circle</button>
+            <input type="color" id="drawing-color" value="#000000">
+            <input type="range" id="drawing-size" min="1" max="50" value="5">
+            <button id="clear-canvas">Clear</button>
+        </div>
+        <canvas id="drawing-canvas" width="800" height="600"></canvas>
+        <button id="insert-drawing">Insert Drawing</button>
+    </div>
+</div>
+        <div class="toolbar-container">
+            <div class="tab-bar">
+                <div class="tabs">
+                    <button class="tab active" data-tab="1">Document 1</button>
+                    <button class="tab" data-tab="2">Document 2</button>
+                    <button id="add-tab">+</button>
+                </div>
+            </div>
+            
+            <div class="file-actions">
+                <button id="load-file">Load File</button>
+                
+            </div>
+        </div>
+        
+        <div class="editor-container">
+            <textarea id="editor1" class="editor active-editor"></textarea>
+            <textarea id="editor2" class="editor"></textarea>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+    <script>// Initialize jsPDF
+const { jsPDF } = window.jspdf;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme switching
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', toggleTheme);
+    
+    // Tab functionality
+    const tabs = document.querySelectorAll('.tab');
+    const editors = document.querySelectorAll('.editor');
+    let currentTab = 1;
+    const maxTabs = 2; // Starting with 2 tabs as requested
+    
+    // Initialize editors
+    initTinyMCE(1);
+    initTinyMCE(2);
+    
+    // Load saved content for all tabs
+    loadAllTabContents();
+    
+    // Set up tab switching
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            switchTab(parseInt(this.dataset.tab));
+        });
+    });
+    
+    // File operations
+    document.getElementById('load-file').addEventListener('click', () => {
+        document.getElementById('file-input').click();
+    });
+    
+    document.getElementById('file-input').addEventListener('change', handleFileSelect);
+    document.getElementById('export-html').addEventListener('click', exportAsHTML);
+    document.getElementById('export-pdf').addEventListener('click', exportAsPDF);
+    document.getElementById('print').addEventListener('click', printDocument);
+    
+    // Auto-save setup
+    setInterval(autoSaveCurrentTab, 5000);
+});
+
+function toggleTheme() {
+    const body = document.body;
+    const themeToggle = document.getElementById('theme-toggle');
+    
+    if (body.classList.contains('dark-theme')) {
+        body.classList.remove('dark-theme');
+        body.classList.add('light-theme');
+        themeToggle.textContent = 'Dark Mode';
+    } else {
+        body.classList.remove('light-theme');
+        body.classList.add('dark-theme');
+        themeToggle.textContent = 'Light Mode';
+    }
+}
+
+function switchTab(tabNumber) {
+    if (tabNumber === currentTab) return;
+    
+    // Save current tab content before switching
+    saveTabContent(currentTab);
+    
+    // Update UI
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.toggle('active', parseInt(tab.dataset.tab) === tabNumber);
+    });
+    
+    document.querySelectorAll('.editor').forEach(editor => {
+        editor.classList.toggle('active-editor', editor.id === `editor${tabNumber}`);
+    });
+    
+    currentTab = tabNumber;
+    
+    // TinyMCE requires this to properly display the editor after tab switch
+    if (window.tinymce.get(`editor${tabNumber}`)) {
+        window.tinymce.get(`editor${tabNumber}`).show();
+    }
+}
+
+function initTinyMCE(editorNumber) {
+    const editorId = `editor${editorNumber}`;
+    
+    window.tinymce.init({
+        selector: `#${editorId}`,
+        plugins: 'print preview paste importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media template codesample table charmap hr pagebreak nonbreaking anchor toc insertdatetime advlist lists wordcount imagetools textpattern noneditable help charmap quickbars emoticons',
+        menubar: 'file edit view insert format tools table help',
+        toolbar: 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | forecolor backcolor removeformat | pagebreak | charmap emoticons | fullscreen preview save print | insertfile image media template link anchor codesample | ltr rtl',
+        toolbar_sticky: true,
+        autosave_ask_before_unload: false,
+        autosave_interval: '5s',
+        autosave_prefix: '{path}{query}-{id}-',
+        autosave_restore_when_empty: false,
+        autosave_retention: '2m',
+        skin: 'oxide-dark',
+        content_css: 'dark',
+        font_formats: 'Andale Mono=andale mono,times; Arial=arial,helvetica,sans-serif; Arial Black=arial black,avant garde; Book Antiqua=book antiqua,palatino; Comic Sans MS=comic sans ms,sans-serif; Courier New=courier new,courier; Georgia=georgia,palatino; Helvetica=helvetica; Impact=impact,chicago; Segoe UI=Segoe UI, sans-serif; Symbol=symbol; Tahoma=tahoma,arial,helvetica,sans-serif; Terminal=terminal,monaco; Times New Roman=times new roman,times; Trebuchet MS=trebuchet ms,geneva; Verdana=verdana,geneva; Webdings=webdings; Wingdings=wingdings,zapf dingbats',
+        fontsize_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
+        setup: function(editor) {
+            editor.on('init', function() {
+                // Load content from localStorage if available
+                const savedContent = localStorage.getItem(`tab_${editorNumber}_content`);
+                if (savedContent) {
+                    editor.setContent(savedContent);
+                }
+            });
+            
+            editor.on('change', function() {
+                // Auto-save on change
+                saveTabContent(editorNumber);
+            });
+        }
+    });
+}
+
+function saveTabContent(tabNumber) {
+    const editor = window.tinymce.get(`editor${tabNumber}`);
+    if (editor) {
+        const content = editor.getContent();
+        localStorage.setItem(`tab_${tabNumber}_content`, content);
+    }
+}
+
+function loadAllTabContents() {
+    for (let i = 1; i <= 2; i++) {
+        const savedContent = localStorage.getItem(`tab_${i}_content`);
+        if (savedContent && window.tinymce.get(`editor${i}`)) {
+            window.tinymce.get(`editor${i}`).setContent(savedContent);
+        }
+    }
+}
+
+function autoSaveCurrentTab() {
+    saveTabContent(currentTab);
+}
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        if (window.tinymce.get(`editor${currentTab}`)) {
+            window.tinymce.get(`editor${currentTab}`).setContent(content);
+            saveTabContent(currentTab);
+        }
+    };
+    
+    if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+        reader.readAsText(file);
+    } else if (file.name.endsWith('.txt')) {
+        reader.readAsText(file);
+    } else {
+        alert('Please select an HTML or TXT file.');
+    }
+    
+    // Reset the input to allow selecting the same file again
+    event.target.value = '';
+}
+
+function exportAsHTML() {
+    const editor = window.tinymce.get(`editor${currentTab}`);
+    if (!editor) return;
+    
+    const content = editor.getContent();
+    const blob = new Blob([content], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `document_${currentTab}_${new Date().toISOString().slice(0, 10)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function exportAsPDF() {
+    const editor = window.tinymce.get(`editor${currentTab}`);
+    if (!editor) return;
+    
+    // Get the text content (strip HTML tags for simple PDF)
+    const content = editor.getContent({ format: 'text' });
+    
+    // Create a new jsPDF instance
+    const doc = new jsPDF();
+    
+    // Split the content into lines that fit the PDF
+    const lines = doc.splitTextToSize(content, 180);
+    
+    // Add the text to the PDF
+    doc.text(lines, 10, 10);
+    
+    // Save the PDF
+    doc.save(`document_${currentTab}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function printDocument() {
+    const editor = window.tinymce.get(`editor${currentTab}`);
+    if (editor) {
+        editor.execCommand('mcePrint');
+    }
+}
+</script><script>// Add these at the top with other variables
+let isDrawing = false;
+let currentTool = 'pencil';
+let lastX = 0;
+let lastY = 0;
+let canvas;
+let ctx;
+
+// Add these in DOMContentLoaded after other event listeners
+document.getElementById('insert-3d').addEventListener('click', () => {
+    document.getElementById('3d-modal').style.display = 'block';
+});
+
+document.getElementById('insert-audio').addEventListener('click', () => {
+    document.getElementById('audio-modal').style.display = 'block';
+});
+
+document.getElementById('start-drawing').addEventListener('click', () => {
+    document.getElementById('drawing-modal').style.display = 'block';
+    initDrawingCanvas();
+});
+
+// Close modal handlers
+document.querySelectorAll('.close').forEach(closeBtn => {
+    closeBtn.addEventListener('click', function() {
+        this.closest('.modal').style.display = 'none';
+    });
+});
+
+// 3D Object insertion
+document.getElementById('3d-file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const container = document.getElementById('3d-preview-container');
+    container.innerHTML = `
+        <div class="model-viewer-container">
+            <model-viewer src="${URL.createObjectURL(file)}" auto-rotate camera-controls></model-viewer>
+        </div>
+    `;
+    
+    // Load model-viewer component if not already loaded
+    if (!document.querySelector('script[src="https://unpkg.com/@google/model-viewer"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
+        script.type = 'module';
+        document.head.appendChild(script);
+    }
+});
+
+document.getElementById('insert-3d-confirm').addEventListener('click', function() {
+    const fileInput = document.getElementById('3d-file-input');
+    if (fileInput.files.length === 0) return;
+    
+    const file = fileInput.files[0];
+    const editor = tinymce.get(`editor${currentTab}`);
+    
+    editor.insertContent(`
+        <div class="3d-object" contenteditable="false">
+            <model-viewer src="${URL.createObjectURL(file)}" style="width:100%;height:400px" auto-rotate camera-controls></model-viewer>
+            <div class="3d-caption" contenteditable="true">3D Object</div>
+        </div>
+    `);
+    
+    document.getElementById('3d-modal').style.display = 'none';
+    fileInput.value = '';
+});
+
+// Audio insertion
+document.getElementById('audio-file-input').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const audioPreview = document.getElementById('audio-preview');
+    audioPreview.src = URL.createObjectURL(file);
+});
+
+document.getElementById('insert-audio-confirm').addEventListener('click', function() {
+    const fileInput = document.getElementById('audio-file-input');
+    if (fileInput.files.length === 0) return;
+    
+    const file = fileInput.files[0];
+    const editor = tinymce.get(`editor${currentTab}`);
+    
+    editor.insertContent(`
+        <div class="audio-container" contenteditable="false">
+            <audio controls src="${URL.createObjectURL(file)}" style="width:100%"></audio>
+            <div class="audio-caption" contenteditable="true">Audio</div>
+        </div>
+    `);
+    
+    document.getElementById('audio-modal').style.display = 'none';
+    fileInput.value = '';
+});
+
+// Drawing functionality
+function initDrawingCanvas() {
+    canvas = document.getElementById('drawing-canvas');
+    ctx = canvas.getContext('2d');
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Set up drawing tools
+    document.querySelectorAll('[data-tool]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentTool = this.dataset.tool;
+        });
+    });
+    
+    // Set up canvas events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    
+    document.getElementById('drawing-color').addEventListener('change', function() {
+        ctx.strokeStyle = this.value;
+        ctx.fillStyle = this.value;
+    });
+    
+    document.getElementById('drawing-size').addEventListener('input', function() {
+        ctx.lineWidth = this.value;
+    });
+    
+    document.getElementById('clear-canvas').addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+    
+    document.getElementById('insert-drawing').addEventListener('click', function() {
+        const editor = tinymce.get(`editor${currentTab}`);
+        const dataURL = canvas.toDataURL('image/png');
+        
+        editor.insertContent(`
+            <div class="drawing-container" contenteditable="false">
+                <img src="${dataURL}" style="max-width:100%">
+                <div class="drawing-caption" contenteditable="true">Drawing</div>
+            </div>
+        `);
+        
+        document.getElementById('drawing-modal').style.display = 'none';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+}
+
+function startDrawing(e) {
+    isDrawing = true;
+    [lastX, lastY] = [e.offsetX, e.offsetY];
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    
+    ctx.strokeStyle = document.getElementById('drawing-color').value;
+    ctx.lineWidth = document.getElementById('drawing-size').value;
+    
+    switch(currentTool) {
+        case 'pencil':
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            [lastX, lastY] = [e.offsetX, e.offsetY];
+            break;
+            
+        case 'line':
+            // For line, we'll draw on mouseup
+            break;
+            
+        case 'rectangle':
+            // For rectangle, we'll draw on mouseup
+            break;
+            
+        case 'circle':
+            // For circle, we'll draw on mouseup
+            break;
+    }
+}
+
+function stopDrawing(e) {
+    if (!isDrawing) return;
+    
+    switch(currentTool) {
+        case 'line':
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            break;
+            
+        case 'rectangle':
+            ctx.beginPath();
+            ctx.rect(lastX, lastY, e.offsetX - lastX, e.offsetY - lastY);
+            ctx.stroke();
+            break;
+            
+        case 'circle':
+            const radius = Math.sqrt(
+                Math.pow(e.offsetX - lastX, 2) + 
+                Math.pow(e.offsetY - lastY, 2)
+            );
+            ctx.beginPath();
+            ctx.arc(lastX, lastY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            break;
+    }
+    
+    isDrawing = false;
+}</script>
+</body>
+</html>
